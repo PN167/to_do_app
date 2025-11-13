@@ -7,6 +7,7 @@ use Cake\ORM\Query\SelectQuery;
 use Cake\ORM\RulesChecker;
 use Cake\ORM\Table;
 use Cake\Validation\Validator;
+use App\Model\Entity\Task;
 
 /**
  * Tasks Model
@@ -63,13 +64,15 @@ class TasksTable extends Table
     {
         $validator
             ->integer('user_id')
+            ->requirePresence('user_id', 'create')
             ->notEmptyString('user_id');
 
         $validator
             ->scalar('title')
             ->maxLength('title', 255)
             ->requirePresence('title', 'create')
-            ->notEmptyString('title');
+            ->notEmptyString('title', __('Task title is required'))
+            ->minLength('title', 3, __('Task title must be at least 3 characters long'));
 
         $validator
             ->scalar('description')
@@ -77,11 +80,23 @@ class TasksTable extends Table
 
         $validator
             ->scalar('status')
-            ->allowEmptyString('status');
+            ->inList('status', [
+                Task::STATUS_NOT_STARTED,
+                Task::STATUS_IN_PROGRESS,
+                Task::STATUS_COMPLETED
+            ], __('Invalid status value'))
+            ->requirePresence('status', 'create')
+            ->notEmptyString('status');
 
         $validator
             ->scalar('priority')
-            ->allowEmptyString('priority');
+            ->inList('priority', [
+                Task::PRIORITY_LOW,
+                Task::PRIORITY_MEDIUM,
+                Task::PRIORITY_HIGH
+            ], __('Invalid priority value'))
+            ->requirePresence('priority', 'create')
+            ->notEmptyString('priority');
 
         $validator
             ->dateTime('due_date')
@@ -102,5 +117,89 @@ class TasksTable extends Table
         $rules->add($rules->existsIn(['user_id'], 'Users'), ['errorField' => 'user_id']);
 
         return $rules;
+    }
+
+    /**
+     * Custom finder to get tasks for a specific user
+     *
+     * @param \Cake\ORM\Query\SelectQuery $query Query object
+     * @param int $userId User ID
+     * @return \Cake\ORM\Query\SelectQuery
+     */
+    public function findByUser(SelectQuery $query, int $userId): SelectQuery
+    {
+        return $query->where(['Tasks.user_id' => $userId]);
+    }
+
+    /**
+     * Custom finder to get tasks by status
+     *
+     * @param \Cake\ORM\Query\SelectQuery $query Query object
+     * @param string $status Task status
+     * @return \Cake\ORM\Query\SelectQuery
+     */
+    public function findByStatus(SelectQuery $query, string $status): SelectQuery
+    {
+        return $query->where(['Tasks.status' => $status]);
+    }
+
+    /**
+     * Custom finder to get overdue tasks
+     *
+     * @param \Cake\ORM\Query\SelectQuery $query Query object
+     * @return \Cake\ORM\Query\SelectQuery
+     */
+    public function findOverdue(SelectQuery $query): SelectQuery
+    {
+        return $query
+            ->where([
+                'Tasks.due_date <' => new \Cake\I18n\DateTime(),
+                'Tasks.status !=' => Task::STATUS_COMPLETED
+            ]);
+    }
+
+    /**
+     * Get statistics for a user's tasks
+     *
+     * @param int $userId User ID
+     * @return array<string, mixed>
+     */
+    public function getStatistics(int $userId): array
+    {
+        $total = $this->find()->where(['user_id' => $userId])->count();
+
+        $byStatus = $this->find()
+            ->select([
+                'status',
+                'count' => $this->find()->func()->count('*')
+            ])
+            ->where(['user_id' => $userId])
+            ->groupBy('status')
+            ->all()
+            ->combine('status', 'count')
+            ->toArray();
+
+        $notStarted = $byStatus['not_started'] ?? 0;
+        $inProgress = $byStatus['in_progress'] ?? 0;
+        $completed = $byStatus['completed'] ?? 0;
+
+        $completionRate = $total > 0 ? round(($completed / $total) * 100, 2) : 0;
+
+        $overdue = $this->find()
+            ->where([
+                'user_id' => $userId,
+                'due_date <' => new \Cake\I18n\DateTime(),
+                'status !=' => 'completed'
+            ])
+            ->count();
+
+        return [
+            'total' => $total,
+            'not_started' => $notStarted,
+            'in_progress' => $inProgress,
+            'completed' => $completed,
+            'completion_rate' => $completionRate,
+            'overdue' => $overdue,
+        ];
     }
 }

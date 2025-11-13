@@ -55,8 +55,12 @@ return function (RouteBuilder $routes): void {
          * its action called 'display', and we pass a param to select the view file
          * to use (in this case, templates/Pages/home.php)...
          */
+        $builder->setExtensions(['json']);
+        $builder->resources('Tasks');
         $builder->connect('/', ['controller' => 'Pages', 'action' => 'display', 'home']);
-
+        $builder->connect('/login', ['controller' => 'Auth', 'action' => 'login']);
+        $builder->connect('/register', ['controller' => 'Auth', 'action' => 'register']);
+     $builder->connect('/logout', ['controller' => 'Auth', 'action' => 'logout']);
         /*
          * ...and connect the rest of 'Pages' controller's URLs.
          */

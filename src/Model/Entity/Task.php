@@ -12,8 +12,8 @@ use Cake\ORM\Entity;
  * @property int $user_id
  * @property string $title
  * @property string|null $description
- * @property string|null $status
- * @property string|null $priority
+ * @property string $status
+ * @property string $priority
  * @property \Cake\I18n\DateTime|null $due_date
  * @property \Cake\I18n\DateTime|null $created
  * @property \Cake\I18n\DateTime|null $modified
@@ -22,6 +22,20 @@ use Cake\ORM\Entity;
  */
 class Task extends Entity
 {
+    /**
+     * Status constants
+     */
+    public const STATUS_NOT_STARTED = 'not_started';
+    public const STATUS_IN_PROGRESS = 'in_progress';
+    public const STATUS_COMPLETED = 'completed';
+
+    /**
+     * Priority constants
+     */
+    public const PRIORITY_LOW = 'low';
+    public const PRIORITY_MEDIUM = 'medium';
+    public const PRIORITY_HIGH = 'high';
+
     /**
      * Fields that can be mass assigned using newEntity() or patchEntity().
      *
@@ -42,4 +56,56 @@ class Task extends Entity
         'modified' => true,
         'user' => true,
     ];
+
+    /**
+     * Get list of available statuses
+     *
+     * @return array<string, string>
+     */
+    public static function getStatuses(): array
+    {
+        return [
+            self::STATUS_NOT_STARTED => __('Not Started'),
+            self::STATUS_IN_PROGRESS => __('In Progress'),
+            self::STATUS_COMPLETED => __('Completed'),
+        ];
+    }
+
+    /**
+     * Get list of available priorities
+     *
+     * @return array<string, string>
+     */
+    public static function getPriorities(): array
+    {
+        return [
+            self::PRIORITY_LOW => __('Low'),
+            self::PRIORITY_MEDIUM => __('Medium'),
+            self::PRIORITY_HIGH => __('High'),
+        ];
+    }
+
+    /**
+     * Check if task is completed
+     *
+     * @return bool
+     */
+    public function isCompleted(): bool
+    {
+        return $this->status === self::STATUS_COMPLETED;
+    }
+
+    /**
+     * Check if task is overdue
+     *
+     * @return bool
+     */
+    public function isOverdue(): bool
+    {
+        if ($this->due_date === null || $this->isCompleted()) {
+            return false;
+        }
+
+        return $this->due_date < new \Cake\I18n\DateTime();
+    }
 }
