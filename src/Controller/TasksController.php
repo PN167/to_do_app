@@ -29,7 +29,7 @@ class TasksController extends AppController
             $query->where(['Tasks.status' => $statusFilter]);
         }
 
-        $query->order(['Tasks.created' => 'DESC']);
+        $query->orderBy(['Tasks.created' => 'DESC']);
         $tasks = $this->paginate($query);
 
         $statistics = $this->Tasks->getStatistics($userId);
