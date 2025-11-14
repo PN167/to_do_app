@@ -7,7 +7,7 @@ use Cake\Core\Configure;
 
 $debug = Configure::read('debug');
 
-$this->layout = 'login';
+$this->layout = 'default';
 $this->assign('title', 'Login');
 ?>
 <div class="container login">
